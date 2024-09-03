@@ -86,7 +86,7 @@ def main():
         'vitg': {'encoder': 'vitg', 'features': 384, 'out_channels': [1536, 1536, 1536, 1536]}
     }
     model = DepthAnythingV2(**{**model_configs[args.encoder], 'max_depth': args.max_depth})
-    
+
     if args.pretrained_from:
         model.load_state_dict({k: v for k, v in torch.load(args.pretrained_from, map_location='cpu').items() if 'pretrained' in k}, strict=False)
     

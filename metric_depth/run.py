@@ -8,6 +8,10 @@ import torch
 
 from depth_anything_v2.dpt import DepthAnythingV2
 
+"""
+python run.py --encoder vitl --load-from checkpoints/first_fine_tune.pth --img-path custom/train/crop_crop_Image_20240715_003141_001.png --outdir endofine
+
+"""
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Depth Anything V2 Metric Depth Estimation')
@@ -36,8 +40,10 @@ if __name__ == '__main__':
     }
     
     depth_anything = DepthAnythingV2(**{**model_configs[args.encoder], 'max_depth': args.max_depth})
-    depth_anything.load_state_dict(torch.load(args.load_from, map_location='cpu'))
+    depth_anything.load_state_dict(torch.load('checkpoints/depth_anything_v2_metric_hypersim_vitl.pth', map_location=DEVICE, weights_only=True))
+    print(1)
     depth_anything = depth_anything.to(DEVICE).eval()
+    print(1)
     
     if os.path.isfile(args.img_path):
         if args.img_path.endswith('txt'):
@@ -51,14 +57,30 @@ if __name__ == '__main__':
     os.makedirs(args.outdir, exist_ok=True)
     
     cmap = matplotlib.colormaps.get_cmap('Spectral')
-    
     for k, filename in enumerate(filenames):
         print(f'Progress {k+1}/{len(filenames)}: {filename}')
         
         raw_image = cv2.imread(filename)
-        
-        depth = depth_anything.infer_image(raw_image, args.input_size)
-        
+        if raw_image is None:
+            print(f"Fialed to load image: {filename}")
+            continue
+        try:
+            depth = depth_anything.infer_image(raw_image, args.input_size)
+            if depth is None:
+                print(f"Failed to predict depth for image: {filename}")
+                continue
+
+            print(f"Depth prediction successful for: {filename}")
+        except Exception as e:
+            print(f"Error during depth prediction for {filename}: {str(e)}")
+            continue
+        # depth = depth_anything.infer_image(raw_image, args.input_size)
+        # if depth is None:
+        #     print(f"Failed to predict depth for image: {filename}")
+        #     continue
+
+        print(f"Depth prediction successful for: {filename}")
+
         if args.save_numpy:
             output_path = os.path.join(args.outdir, os.path.splitext(os.path.basename(filename))[0] + '_raw_depth_meter.npy')
             np.save(output_path, depth)
